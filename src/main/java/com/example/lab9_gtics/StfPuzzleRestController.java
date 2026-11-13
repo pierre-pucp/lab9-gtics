@@ -18,7 +18,7 @@ public class StfPuzzleRestController {
     }
 
     // API pour obtenir l'état actuel du jeu
-    getMapping("/state")
+    @GetMapping("/state")
     public ResponseEntity<StfPuzzleSv> getState() {
         List<StfPuzzleSv> list = repository.findAll();
         if (list.isEmpty()) {
@@ -30,7 +30,7 @@ public class StfPuzzleRestController {
 
     // API pour uploader l'image .jpg via Web Service
     @PostMapping("/upload")
-    public ResponseEntity> uploadImage(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, Object>> uploadImage(@RequestParam("file") MultipartFile file) {
         Map<String, String> response = new HashMap<>();
         if (file.isEmpty() || !file.getOriginalFilename().toLowerCase().endsWith(".jpg")) {
             response.put("status", "error");
@@ -87,7 +87,7 @@ public class StfPuzzleRestController {
 
     // API pour effectuer un mouvement et valider
     @PostMapping("/move")
-    public ResponseEntity> makeMove(@RequestParam("index") int index, 
+    public ResponseEntity<Map<String, Object>> makeMove(@RequestParam("index") int index, 
                                                         @RequestParam("rows") int rows, 
                                                         @RequestParam("cols") int cols) {
         List<StfPuzzleSv> list = repository.findAll();
