@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Stf-Puzzle Simplified Version</title>
@@ -18,23 +18,22 @@
 <div class="container">
     <h2>Stf-Puzzle Simplified Version</h2>
 
-    <form id="configForm" action="/start" method="post">
+    <div>
         <input type="file" id="imageFile" accept=".jpg" style="display:none;" onchange="uploadImage()">
         <button type="button" class="btn" onclick="document.getElementById('imageFile').click()">Seleccionar Personaje</button>
         <br><br>
-        <input type="text" name="dimensions" id="dimensions" placeholder="3x3" value="3x3" required oninput="validateDimensions()">
+        <input type="text" id="dimensions" placeholder="3x3" value="3x3" oninput="validateDimensions()">
         <br><br>
-        <button type="submit" id="startButton" class="btn" style="display:none;">Iniciar el juego</button>
-    </form>
+        <button type="button" id="startButton" class="btn" style="display:none;" onclick="startGame()">Iniciar el juego</button>
+    </div>
 
     <div id="message" style="color: green; font-weight: bold; margin-top: 10px;"></div>
-
-    <div class="board" id="puzzleBoard" th:data-structure="${game.stfGameBoardStructure}">
-        <!-- Les tuiles seront générées dynamiquement en JS -->
-    </div>
+    <div class="board" id="puzzleBoard"></div>
 </div>
 
 <script>
+    let currentStructure = "12345678X";
+
     function validateDimensions() {
         const val = document.getElementById('dimensions').value;
         const isValid = /^\d+x\d+$/.test(val);
@@ -42,58 +41,83 @@
     }
     validateDimensions();
 
+    function loadState() {
+        fetch('/api/puzzle/state')
+        .then(res => res.json())
+        .then(data => {
+            currentStructure = data.stfGameBoardStructure;
+            renderBoard();
+        });
+    }
+
     function uploadImage() {
         let formData = new FormData();
         let fileInput = document.getElementById('imageFile');
         if (fileInput.files.length > 0) {
             formData.append("file", fileInput.files[0]);
-            fetch('/upload', { method: 'POST', body: formData })
-            .then(res => res.text())
+            fetch('/api/puzzle/upload', { method: 'POST', body: formData })
+            .then(res => res.json())
             .then(data => {
-                if(data.startsWith("error")) {
-                    alert(data);
+                if(data.status === "error") {
+                    alert(data.message);
                 } else {
-                    location.reload();
+                    alert("Imagen cargada exitosamente.");
                 }
             });
         }
     }
 
-    // Rendu du plateau de jeu
-    const boardEl = document.getElementById('puzzleBoard');
-    const structure = boardEl.getAttribute('data-structure');
-    const dims = document.getElementById('dimensions').value.split('x');
-    const rows = parseInt(dims[0]);
-    const cols = parseInt(dims[1]);
-
-    boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-
-    for (let i = 0; i < structure.length; i++) {
-        let tile = document.createElement('div');
-        tile.className = 'tile';
-        let char = structure[i];
-        if (char === 'X') {
-            tile.classList.add('empty');
-        } else {
-            tile.innerText = char;
-            tile.onclick = function() {
-                fetch('/move?index=' + i + '&rows=' + rows + '&cols=' + cols, { method: 'POST' })
-                .then(res => res.text())
-                .then(response => {
-                    if(response === 'finished') {
-                        alert("Juego terminado !");
-                        document.getElementById('message').innerText = "Juego terminado !";
-                        setTimeout(() => location.reload(), 1500);
-                    } else if(response !== 'invalid' && response !== 'error') {
-                        boardEl.setAttribute('data-structure', response);
-                        location.reload();
-                    }
-                });
-            };
-        }
-        boardEl.appendChild(tile);
+    function startGame() {
+        const dims = document.getElementById('dimensions').value;
+        fetch('/api/puzzle/start?dimensions=' + dims, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            currentStructure = data.stfGameBoardStructure;
+            renderBoard();
+            document.getElementById('message').innerText = "";
+        });
     }
+
+    function renderBoard() {
+        const boardEl = document.getElementById('puzzleBoard');
+        boardEl.innerHTML = "";
+        const dims = document.getElementById('dimensions').value.split('x');
+        const rows = parseInt(dims[0]);
+        const cols = parseInt(dims[1]);
+
+        boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+        for (let i = 0; i < currentStructure.length; i++) {
+            let tile = document.createElement('div');
+            tile.className = 'tile';
+            let char = currentStructure[i];
+            if (char === 'X') {
+                tile.classList.add('empty');
+            } else {
+                tile.innerText = char;
+                tile.onclick = function() {
+                    fetch(`/api/puzzle/move?index=${i}&rows=${rows}&cols=${cols}`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(response => {
+                        if(response.status === 'finished') {
+                            currentStructure = response.board;
+                            renderBoard();
+                            alert("¡Juego terminado !");
+                            document.getElementById('message').innerText = "Juego terminado !";
+                        } else if(response.status === 'success') {
+                            currentStructure = response.board;
+                    renderBoard();
+                        }
+                    });
+                };
+            }
+            boardEl.appendChild(tile);
+        }
+    }
+
+    // Charger l'état au démarrage de la page
+    loadState();
 </script>
 
 </body>
