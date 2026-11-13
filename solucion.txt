@@ -1,0 +1,16 @@
+Solución del Stf-Puzzle Simplified Version:
+
+1. Definición del Estado Inicial:
+   - El tablero se inicializa de forma ordenada según las dimensiones establecidas (por ejemplo, para 3x3: "12345678X", donde 'X' representa la casilla vacía ubicada en la esquina inferior derecha).
+
+2. Algoritmo de Desordenamiento Automático:
+   - Se define una secuencia mínima de 8 pasos de desordenamiento hacia atrás (de atrás hacia adelante) a partir de la imagen completamente ordenada.
+   - Cada paso selecciona aleatoriamente una casilla contigua a la celda vacía 'X' para intercambiar su posición, garantizando que el rompecabezas tenga solución.
+
+3. Lógica de Movimientos Válidos:
+   - Durante la partida, solo se permite mover las fichas que se encuentran en una posición estrictamente contigua (arriba, abajo, izquierda o derecha) a la casilla vacía 'X'.
+   - El sistema valida las coordenadas mediante la fórmula de adyacencia (la suma de las diferencias absolutas de filas y columnas debe ser igual a 1).
+
+4. Persistencia y Fin del Juego:
+   - Cada movimiento válido actualiza automáticamente la estructura del tablero en la base de data (tabla "stf_puzzle_sv", columna "stf_game_board_structure"), permitiendo retomar la partida si se cierra el navegador.
+   - Al colocar todas las piezas en su orden numérico original (ej. "12345678X"), el sistema detecta la victoria, emite el mensaje "Juego terminado !" y reinicia automáticamente el juego tanto en el frontend como en la base de datos.

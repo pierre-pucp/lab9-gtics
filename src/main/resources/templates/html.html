@@ -1,16 +1,100 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puzzle</title>
+    <title>Stf-Puzzle Simplified Version</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; margin-top: 30px; }
+        .container { background: white; padding: 20px; border-radius: 8px; display: inline-block; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        .board { display: grid; gap: 2px; margin: 20px auto; background: #333; padding: 2px; width: 300px; height: 300px; }
+        .tile { background: #ddd; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; cursor: pointer; user-select: none; }
+        .tile.empty { background: white; cursor: default; }
+        .btn { background: #28a745; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-size: 16px; }
+        .btn:hover { background: #218838; }
+    </style>
 </head>
 <body>
-    <h1>Puzzle</h1>
-    <img th:src="${image}">
-    <form action="">
-        <label>Tamaño:</label>
-        <input type="text">
+
+<div class="container">
+    <h2>Stf-Puzzle Simplified Version</h2>
+
+    <form id="configForm" action="/start" method="post">
+        <input type="file" id="imageFile" accept=".jpg" style="display:none;" onchange="uploadImage()">
+        <button type="button" class="btn" onclick="document.getElementById('imageFile').click()">Seleccionar Personaje</button>
+        <br><br>
+        <input type="text" name="dimensions" id="dimensions" placeholder="3x3" value="3x3" required oninput="validateDimensions()">
+        <br><br>
+        <button type="submit" id="startButton" class="btn" style="display:none;">Iniciar el juego</button>
     </form>
+
+    <div id="message" style="color: green; font-weight: bold; margin-top: 10px;"></div>
+
+    <div class="board" id="puzzleBoard" th:data-structure="${game.stfGameBoardStructure}">
+        <!-- Les tuiles seront générées dynamiquement en JS -->
+    </div>
+</div>
+
+<script>
+    function validateDimensions() {
+        const val = document.getElementById('dimensions').value;
+        const isValid = /^\d+x\d+$/.test(val);
+        document.getElementById('startButton').style.display = isValid ? 'inline-block' : 'none';
+    }
+    validateDimensions();
+
+    function uploadImage() {
+        let formData = new FormData();
+        let fileInput = document.getElementById('imageFile');
+        if (fileInput.files.length > 0) {
+            formData.append("file", fileInput.files[0]);
+            fetch('/upload', { method: 'POST', body: formData })
+            .then(res => res.text())
+            .then(data => {
+                if(data.startsWith("error")) {
+                    alert(data);
+                } else {
+                    location.reload();
+                }
+            });
+        }
+    }
+
+    // Rendu du plateau de jeu
+    const boardEl = document.getElementById('puzzleBoard');
+    const structure = boardEl.getAttribute('data-structure');
+    const dims = document.getElementById('dimensions').value.split('x');
+    const rows = parseInt(dims[0]);
+    const cols = parseInt(dims[1]);
+
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+    for (let i = 0; i < structure.length; i++) {
+        let tile = document.createElement('div');
+        tile.className = 'tile';
+        let char = structure[i];
+        if (char === 'X') {
+            tile.classList.add('empty');
+        } else {
+            tile.innerText = char;
+            tile.onclick = function() {
+                fetch('/move?index=' + i + '&rows=' + rows + '&cols=' + cols, { method: 'POST' })
+                .then(res => res.text())
+                .then(response => {
+                    if(response === 'finished') {
+                        alert("Juego terminado !");
+                        document.getElementById('message').innerText = "Juego terminado !";
+                        setTimeout(() => location.reload(), 1500);
+                    } else if(response !== 'invalid' && response !== 'error') {
+                        boardEl.setAttribute('data-structure', response);
+                        location.reload();
+                    }
+                });
+            };
+        }
+        boardEl.appendChild(tile);
+    }
+</script>
+
 </body>
 </html>
